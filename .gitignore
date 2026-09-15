@@ -38,6 +38,10 @@ node_modules/
 out/
 .vercel
 
+# --- Vite / Cloudflare Workers ---
+dist/
+.wrangler/
+
 # --- Python / FastAPI ---
 __pycache__/
 *.pyc

@@ -1,0 +1,42 @@
+name = "weekly-thumbnail-template-demo"
+main = "src/worker/index.ts"
+compatibility_date = "2024-09-25"
+
+[triggers]
+# JST 03:00 = UTC 18:00 (前日)
+crons = ["0 18 * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "weekly_thumbnail_demo"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "src/worker/db/migrations"
+
+[vars]
+APP_ENV = "development"
+
+[env.production]
+[env.production.triggers]
+crons = ["0 18 * * *"]
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "weekly_thumbnail_demo"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "src/worker/db/migrations"
+
+[env.production.vars]
+APP_ENV = "production"
+
+# フロントエンド（Vite静的ビルド）をWorkers Assetsとして同じWorkerから配信する。
+# Cloudflare Pagesはこのアカウントで使用中のAPIトークンにPages編集権限が無いため、
+# 姉妹デモ（contract-flow-template-demo 等）と同じくWorkers Assets方式を採用する。
+[env.production.assets]
+directory = "./dist/frontend"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+not_found_handling = "single-page-application"
+
+[[env.production.routes]]
+pattern = "weekly-thumbnail-template-demo.rictaworks.jp"
+custom_domain = true

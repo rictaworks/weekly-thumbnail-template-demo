@@ -1,0 +1,35 @@
+{
+  "name": "weekly-thumbnail-template-demo",
+  "version": "01.01.00",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:worker": "wrangler dev",
+    "dev:frontend": "vite",
+    "build:worker": "tsc -p tsconfig.json --noEmit",
+    "build:frontend": "vite build",
+    "build": "npm run build:frontend && npm run build:worker",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.frontend.json --noEmit",
+    "db:migrate:local": "wrangler d1 migrations apply weekly_thumbnail_demo --local",
+    "deploy": "wrangler deploy --env production"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260915.1",
+    "@playwright/test": "^1.47.2",
+    "@types/jsdom": "^21.1.7",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.6.2",
+    "vite": "^7.1.5",
+    "vitest": "^5.0.1",
+    "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^7.3.1",
+    "@fortawesome/free-solid-svg-icons": "^7.3.1",
+    "fflate": "^0.8.2",
+    "hono": "^4.6.3"
+  }
+}
