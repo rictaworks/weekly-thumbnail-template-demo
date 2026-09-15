@@ -123,6 +123,8 @@ export interface BatchRowResponse {
   readonly composition: Composition | null;
   readonly findings: readonly Finding[];
   readonly verdict: Verdict;
+  readonly generationId?: string;
+  readonly revisionNo?: number;
 }
 
 export interface BatchConfirmResponse {

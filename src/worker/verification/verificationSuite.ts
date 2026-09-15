@@ -12,9 +12,9 @@ import { MIN_CONTRAST_GRAYSCALE, MIN_CONTRAST_PRIMARY, MIN_CONTRAST_SECONDARY_AC
 import { FINDING_CODES, MESSAGES } from "../errors/messages.js";
 import type { Composition, Finding, Rect, TemplateMaster } from "../types.js";
 
-function topicActualRect(composition: Composition, topicFrame: Rect): Rect {
+function topicActualRect(composition: Composition, topicFrame: Rect, lineHeightRatio: number): Rect {
   const width = Math.max(0, ...composition.topicLines.map((l) => l.width));
-  const height = composition.topicLines.length * composition.topicFontSize * 1.35;
+  const height = composition.topicLines.length * composition.topicFontSize * lineHeightRatio;
   return { x: topicFrame.x, y: topicFrame.y, w: width, h: height };
 }
 
@@ -58,7 +58,7 @@ function checkSafeArea(composition: Composition, template: TemplateMaster): Find
   const safeArea = insetRect({ x: 0, y: 0, w: template.canvasWidth, h: template.canvasHeight }, template.safeMargin);
   const rects: Rect[] = [
     ...template.slots.filter((s) => CONTENT_FIXED_SLOTS.has(s.code)).map((s) => s.rect),
-    topicActualRect(composition, topicSlot.rect),
+    topicActualRect(composition, topicSlot.rect, topicSlot.typography!.lineHeightRatio),
     weekActualRect(composition, weekSlot.rect),
   ];
   const violated = rects.some((r) => !rectContains(safeArea, r));
@@ -74,7 +74,7 @@ function checkForbiddenArea(composition: Composition, template: TemplateMaster):
   const weekSlot = getSlot(template, "S-WEEK");
   const rects: Rect[] = [
     ...template.slots.filter((s) => CONTENT_FIXED_SLOTS.has(s.code)).map((s) => s.rect),
-    topicActualRect(composition, topicSlot.rect),
+    topicActualRect(composition, topicSlot.rect, topicSlot.typography!.lineHeightRatio),
     weekActualRect(composition, weekSlot.rect),
   ];
   const violated = rects.some((r) => template.forbiddenAreas.some((f) => rectIntersects(r, f)));

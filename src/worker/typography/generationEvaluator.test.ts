@@ -24,10 +24,31 @@ describe("evaluateGeneration", () => {
     expect(result.findings.some((f) => f.code === "F-TOPIC-LENGTH")).toBe(true);
   });
 
+  it("境界値：1文字の話題は文字数チェックでは不適合にならない", () => {
+    const result = evaluateGeneration(template, 1, "秋", false);
+    expect(result.findings.some((f) => f.code === "F-TOPIC-LENGTH")).toBe(false);
+  });
+
+  it("境界値：60文字ちょうどの話題は文字数チェックでは不適合にならない", () => {
+    const result = evaluateGeneration(template, 1, "あ".repeat(60), false);
+    expect(result.findings.some((f) => f.code === "F-TOPIC-LENGTH")).toBe(false);
+  });
+
+  it("境界値：空文字（0文字）の話題は不適合になる", () => {
+    const result = evaluateGeneration(template, 1, "", false);
+    expect(result.verdict).toBe("不適合");
+    expect(result.findings.some((f) => f.code === "F-TOPIC-LENGTH")).toBe(true);
+  });
+
   it("明示改行が最大行数-1を超えると不適合になる", () => {
     const result = evaluateGeneration(template, 1, "あ\nい\nう\nえ", false);
     expect(result.verdict).toBe("不適合");
     expect(result.findings.some((f) => f.code === "F-TOPIC-BREAK-LIMIT")).toBe(true);
+  });
+
+  it("境界値：明示改行がちょうど最大行数-1個(T01は2個)の話題は改行数チェックでは不適合にならない", () => {
+    const result = evaluateGeneration(template, 1, "あ\nい\nう", false);
+    expect(result.findings.some((f) => f.code === "F-TOPIC-BREAK-LIMIT")).toBe(false);
   });
 
   it("週番号重複フラグがtrueなら注意付き適合になる", () => {

@@ -70,6 +70,7 @@ export const TEMPLATE_SELECT_PAGE = {
 
 export const GENERATE_PAGE = {
   heading: "単票生成",
+  templateLabel: "テンプレート",
   weekNumberLabel: "週番号",
   weekNumberDirect: "直接入力",
   weekNumberFromDate: "日付から算出",
@@ -91,6 +92,7 @@ export const GENERATE_PAGE = {
 
 export const VERIFY_PAGE = {
   heading: "検版",
+  noDraftNotice: "単票生成画面で組版結果を作成してから検版画面を開いてください。",
   actualSize: "原寸",
   listingWidth: "一覧表示幅(360px)",
   microWidth: "超縮小表示幅(210px)",
@@ -139,4 +141,5 @@ export const VERDICT_LABEL: Record<string, string> = {
 export const COMMON = {
   loading: "読み込み中...",
   errorGeneric: "処理に失敗しました。時間をおいて再度お試しください。",
+  fontUnavailable: "同梱フォントの読み込みに失敗したため、プレビューを表示できません。",
 };

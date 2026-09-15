@@ -62,6 +62,7 @@ batchRoute.post("/confirm", async (c) => {
   );
 
   let confirmedCount = 0;
+  const confirmedBySeq = new Map<number, { generationId: string; revisionNo: number }>();
   for (const row of eligible) {
     if (row.composition === null || row.weekNumber === null) continue;
     const generation = await generationRepo.save({
@@ -78,8 +79,11 @@ batchRoute.post("/confirm", async (c) => {
     });
     const itemRow = batch.items.find((i) => i.seq === row.seq);
     if (itemRow) await batchRepo.markConfirmed(sessionId, itemRow.id, generation.id);
+    confirmedBySeq.set(row.seq, { generationId: generation.id, revisionNo: generation.revisionNo });
     confirmedCount += 1;
   }
 
-  return c.json({ batchId: batch.batch.id, confirmedCount, totalCount: rows.length, rows });
+  const enrichedRows = rows.map((row) => ({ ...row, ...confirmedBySeq.get(row.seq) }));
+
+  return c.json({ batchId: batch.batch.id, confirmedCount, totalCount: rows.length, rows: enrichedRows });
 });

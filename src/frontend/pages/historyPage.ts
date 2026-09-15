@@ -62,7 +62,8 @@ export async function renderHistoryPage(main: HTMLElement): Promise<void> {
   exportButton.textContent = HISTORY_PAGE.reExportButton;
   exportButton.disabled = true;
 
-  await loadAppFont().catch(() => undefined);
+  // フォント読み込みはボタンのイベント登録をブロックしない。描画直前にawaitする。
+  const fontReadyPromise = loadAppFont().catch(() => undefined);
   let activeGenerationId: string | null = null;
 
   for (const generation of generations) {
@@ -83,8 +84,8 @@ export async function renderHistoryPage(main: HTMLElement): Promise<void> {
     reproduceButton.className = "secondary";
     reproduceButton.textContent = HISTORY_PAGE.reproduceButton;
     reproduceButton.addEventListener("click", async () => {
-      const detail = await fetchGenerationDetail(generation.id);
-      const { template } = await fetchTemplate(generation.templateCode);
+      const [detail, { template }] = await Promise.all([fetchGenerationDetail(generation.id), fetchTemplate(generation.templateCode)]);
+      await fontReadyPromise;
       const weekSlot = template.slots.find((s) => s.code === "S-WEEK");
       const weekFontSize = weekSlot?.typography?.maxSize ?? detail.generation.fontSize;
       renderComposition(preview, toComposition(detail, weekFontSize), template);

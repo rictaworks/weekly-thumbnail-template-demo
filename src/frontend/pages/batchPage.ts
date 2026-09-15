@@ -1,9 +1,10 @@
-import { confirmBatch, fetchTemplates, validateBatch } from "../api/client.js";
+import { confirmBatch, fetchTemplates, recordExport, validateBatch } from "../api/client.js";
 import { createHoneypotField } from "../components/honeypot.js";
 import { verdictBadge } from "../components/verdict.js";
 import { loadAppFont } from "../rendering/fontLoader.js";
 import { renderComposition } from "../rendering/canvasRenderer.js";
 import { canvasToPngBlob, bundleZip, triggerDownload } from "../rendering/exporter.js";
+import { buildExportFileName } from "../../shared/fileNameBuilder.js";
 import { BATCH_PAGE, COMMON } from "../strings/ja.js";
 import type { BatchRowResponse, TemplateMaster } from "../api/types.js";
 
@@ -66,7 +67,8 @@ export async function renderBatchPage(main: HTMLElement): Promise<void> {
 
   main.append(templateSelect, notice, textarea, honeypot.element, validateButton, confirmButton, exportAllButton, table, preview);
 
-  await loadAppFont().catch(() => undefined);
+  // フォント読み込みはイベント登録をブロックしない。描画直前にawaitする。
+  const fontReadyPromise = loadAppFont().catch(() => undefined);
 
   let lastRows: readonly BatchRowResponse[] = [];
 
@@ -83,7 +85,8 @@ export async function renderBatchPage(main: HTMLElement): Promise<void> {
     for (const row of rows) {
       const tr = document.createElement("tr");
       tr.style.cursor = "pointer";
-      tr.addEventListener("click", () => {
+      tr.addEventListener("click", async () => {
+        await fontReadyPromise;
         if (row.composition) renderComposition(preview, row.composition, templates.find((t) => t.code === templateSelect.value) ?? defaultTemplate);
       });
 
@@ -137,15 +140,18 @@ export async function renderBatchPage(main: HTMLElement): Promise<void> {
   });
 
   exportAllButton.addEventListener("click", async () => {
-    const confirmable = lastRows.filter((r) => r.composition && (r.verdict === "適合" || r.verdict === "注意付き適合"));
+    await fontReadyPromise;
+    // 確定済み(generationIdを持つ)行のみが書き出し対象。11.3節：書き出し実施を履歴に記録する。
+    const confirmed = lastRows.filter((r) => r.composition && r.generationId && r.revisionNo !== undefined);
     const activeTemplate = templates.find((t) => t.code === templateSelect.value) ?? defaultTemplate;
     const entries = [];
-    for (const row of confirmable) {
-      if (!row.composition) continue;
+    for (const row of confirmed) {
+      if (!row.composition || !row.generationId || row.revisionNo === undefined) continue;
       const canvas = document.createElement("canvas");
       renderComposition(canvas, row.composition, activeTemplate);
       const blob = await canvasToPngBlob(canvas);
-      const fileName = `${activeTemplate.code}_${String(row.composition.weekNumber).padStart(3, "0")}.png`;
+      const fileName = buildExportFileName(activeTemplate.code, row.composition.weekNumber, row.revisionNo);
+      await recordExport(row.generationId, "一括");
       entries.push({ fileName, blob });
     }
     const zipBlob = await bundleZip(entries);

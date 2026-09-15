@@ -11,6 +11,12 @@ import type { Env } from "../env.js";
 import type { SessionVariables } from "../session.js";
 import type { TemplateMaster } from "../../types.js";
 
+const VALID_ORIGINS = new Set(["単票", "改訂"]);
+
+export function sanitizeOrigin(value: unknown): "単票" | "改訂" {
+  return typeof value === "string" && VALID_ORIGINS.has(value) ? (value as "単票" | "改訂") : "単票";
+}
+
 function placeWeekLine(template: TemplateMaster, weekNumber: number) {
   const weekSlot = getSlot(template, "S-WEEK");
   const weekText = formatWeekNumber(weekNumber, template);
@@ -89,7 +95,7 @@ generationRoute.post("/confirm", async (c) => {
     composition: evaluation.composition,
     verdict: evaluation.verdict,
     findings: evaluation.findings,
-    origin: isDuplicate ? "改訂" : (body.origin ?? "単票"),
+    origin: isDuplicate ? "改訂" : sanitizeOrigin(body.origin),
     now: () => new Date().toISOString(),
     newId: () => crypto.randomUUID(),
   });

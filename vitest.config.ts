@@ -5,6 +5,6 @@ export default defineConfig({
     globals: true,
     environment: "node",
     environmentMatchGlobs: [["src/frontend/**/*.test.ts", "jsdom"]],
-    include: ["src/worker/**/*.test.ts", "src/frontend/**/*.test.ts"],
+    include: ["src/worker/**/*.test.ts", "src/frontend/**/*.test.ts", "src/shared/**/*.test.ts"],
   },
 });

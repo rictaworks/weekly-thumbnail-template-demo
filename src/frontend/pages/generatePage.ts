@@ -42,8 +42,10 @@ export async function renderGeneratePage(main: HTMLElement): Promise<void> {
   const templateField = document.createElement("div");
   templateField.className = "field";
   const templateLabel = document.createElement("label");
-  templateLabel.textContent = "テンプレート";
+  templateLabel.textContent = GENERATE_PAGE.templateLabel;
+  templateLabel.htmlFor = "generate-template";
   const templateSelect = document.createElement("select");
+  templateSelect.id = "generate-template";
   for (const t of templates) {
     const option = document.createElement("option");
     option.value = t.code;
@@ -57,7 +59,9 @@ export async function renderGeneratePage(main: HTMLElement): Promise<void> {
   weekField.className = "field";
   const weekLabel = document.createElement("label");
   weekLabel.textContent = GENERATE_PAGE.weekNumberLabel;
+  weekLabel.htmlFor = "generate-week-number";
   const weekInput = document.createElement("input");
+  weekInput.id = "generate-week-number";
   weekInput.type = "text";
   weekInput.placeholder = GENERATE_PAGE.weekNumberDirect;
 
@@ -81,7 +85,9 @@ export async function renderGeneratePage(main: HTMLElement): Promise<void> {
   topicField.className = "field";
   const topicLabel = document.createElement("label");
   topicLabel.textContent = GENERATE_PAGE.topicLabel;
+  topicLabel.htmlFor = "generate-topic";
   const topicInput = document.createElement("textarea");
+  topicInput.id = "generate-topic";
   topicInput.rows = 6;
   topicInput.placeholder = GENERATE_PAGE.topicPlaceholder;
   const charCount = document.createElement("div");
@@ -133,15 +139,14 @@ export async function renderGeneratePage(main: HTMLElement): Promise<void> {
   layout.append(form, previewCard, infoCard);
   main.appendChild(layout);
 
-  let fontReady = false;
-  try {
-    await loadAppFont();
-    fontReady = true;
-  } catch {
+  // フォント読み込みは入力欄・ボタンのイベント登録をブロックしない(同期的な応答性を優先する)。
+  // 描画直前にfontReadyPromiseをawaitすることで、読み込み完了を待ってから描画する要件は満たす。
+  const fontReadyPromise = loadAppFont().catch(() => {
     const warning = document.createElement("p");
-    warning.textContent = "同梱フォントの読み込みに失敗したため、プレビューを表示できません。";
+    warning.textContent = COMMON.fontUnavailable;
     previewCard.appendChild(warning);
-  }
+    return null;
+  });
 
   let latestEvaluation: EvaluateResponse | null = null;
   let confirmedGenerationId: string | null = null;
@@ -176,7 +181,7 @@ export async function renderGeneratePage(main: HTMLElement): Promise<void> {
         compositionInfo.append(sizeLine, lineCountLine);
       }
 
-      if (evaluation.composition && fontReady) {
+      if (evaluation.composition && (await fontReadyPromise) !== null) {
         renderComposition(canvas, evaluation.composition, template);
       }
 

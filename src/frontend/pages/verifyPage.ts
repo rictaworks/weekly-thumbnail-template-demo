@@ -35,7 +35,7 @@ export async function renderVerifyPage(main: HTMLElement): Promise<void> {
   const draft = getDraft();
   if (!draft || !draft.evaluation.composition) {
     const notice = document.createElement("p");
-    notice.textContent = "単票生成画面で組版結果を作成してから検版画面を開いてください。";
+    notice.textContent = VERIFY_PAGE.noDraftNotice;
     main.appendChild(notice);
     return;
   }
@@ -56,12 +56,10 @@ export async function renderVerifyPage(main: HTMLElement): Promise<void> {
   main.appendChild(checklistHeading);
   main.appendChild(buildChecklist(draft.evaluation.findings));
 
-  await loadAppFont();
-
-  const baseCanvas = document.createElement("canvas");
-  renderComposition(baseCanvas, draft.evaluation.composition, draft.template);
+  let baseCanvas: HTMLCanvasElement | null = null;
 
   function redraw(): void {
+    if (!baseCanvas) return;
     compareGrid.innerHTML = "";
     const overlaid = withOverlays(baseCanvas, draft!.template, {
       safeMargin: safeMarginToggle.input.checked,
@@ -76,9 +74,14 @@ export async function renderVerifyPage(main: HTMLElement): Promise<void> {
     );
   }
 
+  // フォント読み込みはトグル操作のイベント登録をブロックしない。
   for (const toggle of [safeMarginToggle, forbiddenAreaToggle, slotBoundsToggle]) {
     toggle.input.addEventListener("change", redraw);
   }
+
+  await loadAppFont();
+  baseCanvas = document.createElement("canvas");
+  renderComposition(baseCanvas, draft.evaluation.composition, draft.template);
   redraw();
 }
 

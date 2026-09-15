@@ -2,7 +2,9 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { InMemoryStore } from "../store.js";
 import { GenerationRepository } from "./generationRepository.js";
 import { composeGeneration } from "../../typography/composer.js";
-import { getTemplate } from "../../master/templates.js";
+import { placeWeekText } from "../../typography/layoutResolver.js";
+import { getTemplate, getSlot } from "../../master/templates.js";
+import type { Composition } from "../../types.js";
 
 const template = getTemplate("T01")!;
 
@@ -105,5 +107,62 @@ describe("GenerationRepository", () => {
     expect(await repo.findDuplicateWeek("session-A", "T01", 9)).toBe(true);
     expect(await repo.findDuplicateWeek("session-A", "T02", 9)).toBe(false);
     expect(await repo.findDuplicateWeek("session-B", "T01", 9)).toBe(false);
+  });
+
+  it("履歴からの再現結果が確定時の組版結果と一致する(行データの丸め誤差を除く)", async () => {
+    const repo = buildRepo();
+    const topic = "週次のお知らせです。今週のテーマは秋の味覚について。";
+    const { composition } = composeGeneration(template, 21, topic);
+    const saved = await repo.save({
+      sessionId: "session-A",
+      templateCode: "T01",
+      weekNumber: 21,
+      topicRaw: topic,
+      composition,
+      verdict: "適合",
+      findings: [],
+      origin: "単票",
+      now,
+      newId,
+    });
+
+    const detail = await repo.load("session-A", saved.id);
+    expect(detail).not.toBeNull();
+
+    // 週番号スロットは話題に依存せずテンプレート・週番号のみから一意に定まるため保存せず、
+    // GET /api/generations/:id と同様にテンプレート・週番号から再現時に導出する(src/worker/api/routes/generation.ts placeWeekLine相当)。
+    const weekSlot = getSlot(template, "S-WEEK");
+    const reproducedWeekLine = placeWeekText(
+      composition.weekText,
+      weekSlot.typography!.maxSize,
+      weekSlot.rect,
+      weekSlot.typography!.letterSpacingEm,
+    );
+
+    // 話題スロットは保存された行データ(幅・ベースラインは整数へ丸めて保存)から再構成する(historyPage.ts toComposition相当)。
+    const reproduced: Composition = {
+      templateCode: template.code,
+      weekNumber: 21,
+      weekText: reproducedWeekLine.text,
+      weekFontSize: weekSlot.typography!.maxSize,
+      weekLine: reproducedWeekLine,
+      topicNormalized: detail!.generation.topicNormalized,
+      topicFontSize: detail!.generation.fontSize,
+      topicLines: [...detail!.lines]
+        .sort((a, b) => a.seq - b.seq)
+        .map((l) => ({ seq: l.seq, text: l.text, width: l.width, baselineY: l.baselineY })),
+    };
+
+    expect(reproduced.topicFontSize).toBe(composition.topicFontSize);
+    expect(reproduced.topicNormalized).toBe(composition.topicNormalized);
+    expect(reproduced.topicLines.map((l) => l.text)).toEqual(composition.topicLines.map((l) => l.text));
+    expect(reproduced.topicLines.map((l) => Math.round(l.width))).toEqual(
+      composition.topicLines.map((l) => Math.round(l.width)),
+    );
+    expect(reproduced.topicLines.map((l) => Math.round(l.baselineY))).toEqual(
+      composition.topicLines.map((l) => Math.round(l.baselineY)),
+    );
+    expect(reproduced.weekText).toBe(composition.weekText);
+    expect(reproduced.weekLine).toEqual(composition.weekLine);
   });
 });

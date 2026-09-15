@@ -13,5 +13,5 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["src/frontend/**/*.ts"]
+  "include": ["src/frontend/**/*.ts", "src/shared/**/*.ts"]
 }

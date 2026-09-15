@@ -1,5 +1,2 @@
-// 11.3節：ファイル名はテンプレートコード・ゼロ埋め3桁の週番号・改訂番号から機械的に組み立てる。話題の文字列は含めない。
-export function buildExportFileName(templateCode: string, weekNumber: number, revisionNo: number): string {
-  const weekPart = String(weekNumber).padStart(3, "0");
-  return `${templateCode}_${weekPart}_r${revisionNo}.png`;
-}
+// src/shared/fileNameBuilder.ts へ集約（frontend一括書き出しとの重複実装を避けるため）。
+export { buildExportFileName } from "../../shared/fileNameBuilder.js";
