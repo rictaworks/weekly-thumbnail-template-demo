@@ -38,7 +38,7 @@
 
 仕様の正は [`requirements.md`](requirements.md)（用語定義・テンプレート仕様・入力仕様・組版仕様・検版判定仕様・一括生成・履歴/改訂/書き出し・データ設計・ER図・DFD・シーケンス図・クラス図・状態遷移図・ユースケース図を含む）。実装前に必ず参照すること。本ファイルには要約と横断的な注意点のみを記す。
 
-**現状（2026-09-16時点）：Issue #1（ワンショット実装）完了・PR #2マージ済み。テンプレート選択・単票生成・検版・一括生成・履歴の5画面、決定的組版エンジン、検版判定V1〜V7、D1セッション分離、日次リセット、デモ共通UI・GA4を実装済み。Cloudflareへの実デプロイ（`wrangler deploy`）は未実施（本セッションにCloudflare認証情報が無かったため。D1データベース作成とdatabase_id差し替え、Cloudflareアカウントでの`wrangler login`が別途必要）。
+**現状（2026-09-16時点）：Issue #1（ワンショット実装）完了・PR #2マージ済み・タグ`v01.01.00`。テンプレート選択・単票生成・検版・一括生成・履歴の5画面、決定的組版エンジン、検版判定V1〜V7、D1セッション分離、日次リセット、デモ共通UI・GA4を実装済み。**本番デプロイ完了・本番ユーザーテスト完了**（2026-09-16、詳細は本ファイル「本番デプロイ」節）。既知の未修正バグは無し。
 
 **注意（デモ版共通UI必須要素）：`requirements.md` が対象外としていても、`20_開発/.claude/agents/demo-common-ui.md` が定める全デモ共通の必須4要素（アンバーバナー・「← デモ一覧へ」戻るリンク・「ご相談はこちら」固定ボタン・`/legal`ページ）とGA4タグ（`G-C04W1XKS16`）は必須。過去3件（`auth-link-triage-ledger-demo`・`design-to-section-html-demo`・`contract-flow-template-demo`）で本番デプロイ後の事後対応になった同型の抜けがある。**最初の実装Issueに含めること。**
 
@@ -125,7 +125,15 @@
 | `npm run test:e2e` | Playwright E2Eテスト実行（`test/pr***/`。対象は開発サーバー） |
 | `npm run typecheck` | worker・frontend双方の型チェック |
 | `npm run db:migrate:local` | D1ローカルマイグレーション適用 |
-| `npm run deploy` | `wrangler deploy --env production`（本番デプロイ。事前にD1データベース作成・`wrangler.toml`の`database_id`差し替え・`wrangler login`が必要） |
+| `npm run deploy` | `wrangler deploy --env production`（本番デプロイ） |
+
+## 本番デプロイ（2026-09-16実施・デスクトップから実施済み）
+
+- D1データベース `weekly_thumbnail_demo`（uuid `9f40e44a-3033-4d8e-966c-26e659763344`）をCloudflare MCP経由で作成、`src/worker/db/migrations/0001_init.sql`を`d1_database_query`で直接適用（`wrangler d1 migrations apply`ではない）。`wrangler.toml`の`database_id`（default/production両方）を実IDへ差し替え済み。
+- デプロイ用トークンは、既存の「rictaworks-jp workers-builds ONLY」等の他リポジトリ専用トークンを流用せず、**本リポジトリ専用の新規トークン**（Cloudflareダッシュボード表示名 `weekly-thumbnail-template-demo ONLY (do not reuse for other repos)`。権限：アカウント Workers:管理・D1:編集、ゾーン Workers ルート:編集・SSL および証明書:編集）を発行し、`.deploy.<COMPUTERNAME>.enc`に`CLOUDFLARE_API_TOKEN_WEEKLY_THUMBNAIL`として保存した（ルートCLAUDE.md「Cloudflare APIトークンの運用ルール」節に準拠）。
+- デプロイはWSL側から`npx wrangler deploy --env production`（`CLOUDFLARE_API_TOKEN`・`CLOUDFLARE_ACCOUNT_ID=9c5183bedab008ccef3581056752fa6f`をPowerShellの`$env:WSLENV`経由でWSLへ転送。`/p`修飾子は付けない——パス変換用のためトークン等の文字列には使わない）。
+- 本番URL：`https://weekly-thumbnail-template-demo.rictaworks.jp/`。日次リセットCronも同時に有効化済み（`schedule: 0 18 * * *` = JST 03:00）。
+- 本番ユーザーテスト（Claude Desktopのブラウザツール）：テンプレート選択→単票生成（週番号・話題入力→プレビュー同期→適合判定→確定）→履歴での保存確認→履歴からの再現描画→PNG再書き出し（ダウンロードしたファイルを実際に開いて版面・ファイル名`T01_012_r1.png`を確認）→不適合ケース（61/60文字超過）の判定・理由提示→`/legal`ページ→モバイル幅(375px)表示、いずれも実機で確認済み。
 
 ## 参照ドキュメント
 

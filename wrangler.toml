@@ -9,7 +9,7 @@ crons = ["0 18 * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "weekly_thumbnail_demo"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "9f40e44a-3033-4d8e-966c-26e659763344"
 migrations_dir = "src/worker/db/migrations"
 
 [vars]
@@ -22,7 +22,7 @@ crons = ["0 18 * * *"]
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "weekly_thumbnail_demo"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "9f40e44a-3033-4d8e-966c-26e659763344"
 migrations_dir = "src/worker/db/migrations"
 
 [env.production.vars]
