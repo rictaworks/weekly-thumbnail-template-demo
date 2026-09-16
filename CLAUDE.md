@@ -38,7 +38,7 @@
 
 仕様の正は [`requirements.md`](requirements.md)（用語定義・テンプレート仕様・入力仕様・組版仕様・検版判定仕様・一括生成・履歴/改訂/書き出し・データ設計・ER図・DFD・シーケンス図・クラス図・状態遷移図・ユースケース図を含む）。実装前に必ず参照すること。本ファイルには要約と横断的な注意点のみを記す。
 
-**現状（2026-09-16時点）：AIセッティング完了のみ。Issue未発行・実装未着手。**
+**現状（2026-09-16時点）：Issue #1（ワンショット実装）完了・PR #2マージ済み。テンプレート選択・単票生成・検版・一括生成・履歴の5画面、決定的組版エンジン、検版判定V1〜V7、D1セッション分離、日次リセット、デモ共通UI・GA4を実装済み。Cloudflareへの実デプロイ（`wrangler deploy`）は未実施（本セッションにCloudflare認証情報が無かったため。D1データベース作成とdatabase_id差し替え、Cloudflareアカウントでの`wrangler login`が別途必要）。
 
 **注意（デモ版共通UI必須要素）：`requirements.md` が対象外としていても、`20_開発/.claude/agents/demo-common-ui.md` が定める全デモ共通の必須4要素（アンバーバナー・「← デモ一覧へ」戻るリンク・「ご相談はこちら」固定ボタン・`/legal`ページ）とGA4タグ（`G-C04W1XKS16`）は必須。過去3件（`auth-link-triage-ledger-demo`・`design-to-section-html-demo`・`contract-flow-template-demo`）で本番デプロイ後の事後対応になった同型の抜けがある。**最初の実装Issueに含めること。**
 
@@ -48,13 +48,13 @@
 
 | 層 | 技術 | デプロイ先 | 役割 |
 |---|---|---|---|
-| フロントエンド | Cloudflare Pages（TypeScript） | Cloudflare | 入力・プレビュー・検版・一括生成・履歴の各画面、Canvas 描画と PNG 書き出し |
-| アプリケーション | Cloudflare Workers（TypeScript） | Cloudflare | 入力検証・組版導出・判定・履歴管理・セッション管理 |
+| フロントエンド | Vite + TypeScript（フレームワークレスSPA） | Cloudflare Workers Assets | 入力・プレビュー・検版・一括生成・履歴の各画面、Canvas 描画と PNG 書き出し |
+| アプリケーション | Cloudflare Workers（Hono） | Cloudflare | 入力検証・組版導出・判定・履歴管理・セッション管理・`/api/*` |
 | DB | D1（SQLite） | Cloudflare | セッション・生成結果・行・指摘・一括ジョブ・書き出し記録 |
 | 定期実行 | Cron Triggers | Cloudflare | 日次リセット（JST 03:00・全テーブル削除。同梱マスタ・フォント・字幅テーブルは対象外） |
-| 同梱資産 | 本文フォント（サブセット）・字幅テーブル | Cloudflare Pages（静的配信） | 組版と描画の決定性を担保する。外部フォント配信サービスは参照しない |
+| 同梱資産 | 本文フォント（IPAフォントサブセット）・字幅テーブル | Workers Assets（静的配信） | 組版と描画の決定性を担保する。外部フォント配信サービスは参照しない |
 
-- **フロントエンドのフレームワークは requirements.md が特定していない**（「Cloudflare Pages（TypeScript）」のみ規定）。実装Issueで決定すること。同構成の先例（`org-cube-model-router-demo`・`auth-link-triage-ledger-demo`・`contract-flow-template-demo`）を参考にできる。
+- **フロントエンドは Vite + TypeScript（フレームワークレスSPA）、配信は「Cloudflare Pages」ではなく単一Workerからの「Workers Assets」で確定した**（Issue #1で決定）。`wrangler.toml` の `[env.production.assets]`（`directory = "./dist/frontend"`、`run_worker_first = ["/api/*"]`）で、フロントエンド静的ビルドと `/api/*` のHono APIを同一Workerから配信する。姉妹デモ `contract-flow-template-demo` と同方式（使用中のCloudflare APIトークンにPages編集権限が無いため）。
 - テンプレート（版面・パレット・スロット・禁則規則・正規化規則・字幅テーブル）はアプリケーションに同梱する固定データとし、DBには保存しない（requirements.md 6.1 / 13.1）。生成画像も保存しない。
 - 認証・認可は設計に組み込まない（requirements.md 21章）。**Cookieベースのセッションキーがオーナーキー**であり、全テーブルが `session_id` を保持し、参照条件に必ず含める（セッションをまたいだレコードの参照・操作を防止すること）。
 - Bot対策はハニーポット方式（単票生成・一括生成の各フォームに不可視の入力欄・値が入っていれば拒否）。reCAPTCHAは用いない。
@@ -114,7 +114,18 @@
 
 ## コマンド
 
-未実装（2026-09-16時点）。`src/` 配下は `src/worker/**`（Cloudflare Workers・アプリケーション）と `src/frontend/**`（Cloudflare Pages・入力/プレビュー/検版/一括生成/履歴画面・Canvas描画）の2系統になる想定。実装Issueでフレームワーク選定・`package.json` の `scripts` を確定させ、このセクションを更新すること（`contract-flow-template-demo` のコマンド構成が参考になる）。
+`src/` 配下は `src/worker/**`（Cloudflare Workers・Hono・組版エンジン・D1）、`src/frontend/**`（Vite・入力/プレビュー/検版/一括生成/履歴画面・Canvas描画）、`src/shared/**`（worker/frontend共有ロジック）の3系統。
+
+| コマンド | 用途 |
+|---|---|
+| `npm run dev:worker` | wranglerローカル開発サーバー起動（API、`http://localhost:8787`） |
+| `npm run dev:frontend` | Viteフロントエンド開発サーバー起動（`http://localhost:5173`） |
+| `npm run build` | フロントエンド・Worker双方をビルド |
+| `npm test` | vitestユニットテスト実行 |
+| `npm run test:e2e` | Playwright E2Eテスト実行（`test/pr***/`。対象は開発サーバー） |
+| `npm run typecheck` | worker・frontend双方の型チェック |
+| `npm run db:migrate:local` | D1ローカルマイグレーション適用 |
+| `npm run deploy` | `wrangler deploy --env production`（本番デプロイ。事前にD1データベース作成・`wrangler.toml`の`database_id`差し替え・`wrangler login`が必要） |
 
 ## 参照ドキュメント
 
